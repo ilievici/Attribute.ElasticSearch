@@ -16,17 +16,21 @@ namespace Attribute.ElasticSearch
             {
                 Criterias = new Dictionary<string, string>
                 {
-                    {"LAST_NAME", "SMITH"},
-                    //{"KKT","KKT"}
+                    {"PAYMENT_TYPE", "A, B"}
                 },
-                SortFields = new Dictionary<string, string>
+                //SortFields = new Dictionary<string, string>
+                //{
+                //    {"ENTERED_DATE", "DESC"}
+                //},
+                //RangeCriterias = new List<SearchFilter.RangeFilter>
+                //{
+                //    new SearchFilter.RangeFilter("AMOUNT", "1", "99"),
+                //    new SearchFilter.RangeFilter("ENTERED_DATE", DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                //        DateTime.UtcNow.AddDays(5).ToString("yyyy-MM-dd"))
+                //},
+                MisCriterias = new List<SearchFilter.MisFilter>
                 {
-                    {"ENTERED_DATE", "DESC"}
-                },
-                RangeCriterias = new List<SearchFilter.RangeFilter>
-                {
-                    new SearchFilter.RangeFilter("AMOUNT", "1", "99"),
-                    new SearchFilter.RangeFilter("ENTERED_DATE", DateTime.UtcNow.ToString("yyyy-MM-dd"), DateTime.UtcNow.AddDays(5).ToString("yyyy-MM-dd"))
+                   new SearchFilter.MisFilter("AUTOPAY_RETRIEVE", "1972"),
                 }
             };
 

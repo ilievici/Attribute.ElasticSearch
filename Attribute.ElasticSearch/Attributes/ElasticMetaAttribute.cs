@@ -1,17 +1,16 @@
 ﻿
 namespace Attribute.ElasticSearch.Attributes
 {
-    public class ElasticMeta : System.Attribute
+    public class ElasticMetaAttribute : System.Attribute
     {
         public string Name { get; set; }
         public bool WildcardSearch { get; set; }
         public bool IsHased { get; set; }
+        public bool IsNested { get; set; }
 
-        public ElasticMeta(string name, bool wildcardSearch, bool isHased = false)
+        public ElasticMetaAttribute(string name)
         {
             Name = name;
-            WildcardSearch = wildcardSearch;
-            IsHased = isHased;
         }
     }
 }

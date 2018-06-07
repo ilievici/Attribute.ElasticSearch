@@ -31,6 +31,7 @@ namespace Attribute.ElasticSearch.Domain
 
             Criterias = new Dictionary<string, string>();
             SortFields = new Dictionary<string, string>();
+            RangeCriterias = new List<RangeFilter>();
         }
 
         /// <summary>
@@ -69,7 +70,7 @@ namespace Attribute.ElasticSearch.Domain
         }
 
         /// <summary>
-        /// Specific fields search, when it is known
+        /// Specific range fields search
         /// </summary>
         public List<RangeFilter> RangeCriterias { get; set; }
 
@@ -83,6 +84,8 @@ namespace Attribute.ElasticSearch.Domain
         /// </summary>
         public Dictionary<string, string> SortFields { get; set; }
 
+        public List<MisFilter> MisCriterias { get; set; }
+
         public class RangeFilter
         {
             public RangeFilter(string name, string fromValue, string toValue)
@@ -95,6 +98,18 @@ namespace Attribute.ElasticSearch.Domain
             public string Name { get; }
             public string FromValue { get; }
             public string ToValue { get; }
+        }
+        
+        public class MisFilter
+        {
+            public MisFilter(string name, string value)
+            {
+                Name = name;
+                Value = value;
+            }
+
+            public string Name { get; }
+            public string Value { get; }
         }
     }
 }

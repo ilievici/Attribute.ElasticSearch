@@ -23,13 +23,13 @@ namespace Attribute.ElasticSearch
 
         protected class PropertyInfoMeta
         {
-            public PropertyInfoMeta(PropertyInfo info, ElasticMeta meta)
+            public PropertyInfoMeta(PropertyInfo info, ElasticMetaAttribute meta)
             {
                 PropertyInfo = info;
                 ElasticMeta = meta;
             }
             public PropertyInfo PropertyInfo { get; }
-            public ElasticMeta ElasticMeta { get; }
+            public ElasticMetaAttribute ElasticMeta { get; }
         }
 
         public abstract SearchResult<T> Search(IElasticClientProvider elasticClientProvider, SearchFilter filter);
@@ -81,7 +81,7 @@ namespace Attribute.ElasticSearch
             {
                 foreach (object attribute in info.GetCustomAttributes(true))
                 {
-                    ElasticMeta elasticMeta = attribute as ElasticMeta;
+                    ElasticMetaAttribute elasticMeta = attribute as ElasticMetaAttribute;
                     if (elasticMeta == null)
                     {
                         continue;
@@ -129,13 +129,14 @@ namespace Attribute.ElasticSearch
             var commonQuery = BuildCommonQuery(filter.SearchType);
             var query = BuildQuery(filter.Criterias);
             var rangeQuery = BuildRangeQuery(filter.RangeCriterias);
+            var misQuery = BuildMisQuery(filter.MisCriterias);
             var sort = BuildSort(filter.SortFields);
 
             var searchRequest = new SearchRequest<T>(Indices.Parse(indexName), Types.Parse(TypeName))
             {
                 From = filter.ElasticStartingFromDoc,
                 Size = filter.PageSize,
-                Query = commonQuery && query && rangeQuery,
+                Query = commonQuery && query && rangeQuery && misQuery,
                 Sort = sort
             };
 
@@ -193,6 +194,11 @@ namespace Attribute.ElasticSearch
                     throw new ParceException($"Unknown {criteria.Key} propery to search by.");
                 }
 
+                if (criteriaMeta.ElasticMeta.IsNested)
+                {
+                    continue;
+                }
+
                 var searchValue = criteria.Value;
                 if (criteriaMeta.ElasticMeta.IsHased)
                 {
@@ -220,7 +226,7 @@ namespace Attribute.ElasticSearch
             return container;
         }
 
-        private QueryContainer BuildRangeQuery(List<SearchFilter.RangeFilter> rangeCriterias)
+        private QueryContainer BuildRangeQuery(IList<SearchFilter.RangeFilter> rangeCriterias)
         {
             var container = new QueryContainer();
 
@@ -239,7 +245,8 @@ namespace Attribute.ElasticSearch
                         var valueFrom = double.Parse(criteria.FromValue, CultureInfo.InvariantCulture);
                         var valueTo = double.Parse(criteria.ToValue, CultureInfo.InvariantCulture);
 
-                        container &= new QueryContainerDescriptor<T>().Range(qs => qs.Field(criteriaMeta.PropertyInfo)
+                        container &= new QueryContainerDescriptor<T>()
+                            .Range(qs => qs.Field(criteriaMeta.PropertyInfo)
                             .GreaterThanOrEquals(valueFrom)
                             .LessThanOrEquals(valueTo));
                     }
@@ -293,6 +300,55 @@ namespace Attribute.ElasticSearch
                 }
 
                 action.Invoke();
+            }
+
+            return container;
+        }
+
+        private QueryContainer BuildMisQuery(IList<SearchFilter.MisFilter> misCriterias)
+        {
+            var container = new QueryContainer();
+
+            if (!misCriterias.Any())
+            {
+                return container;
+            }
+
+            PropertyInfoMeta propertyInfoMeta = TypeMetadata.FirstOrDefault(s => string.Compare(s.ElasticMeta.Name, "MIS", StringComparison.InvariantCulture) == 0);
+            if (propertyInfoMeta == null)
+            {
+                throw new ParceException("Unknown MIS propery to search by.");
+            }
+
+            if (!propertyInfoMeta.ElasticMeta.IsNested)
+            {
+                return container;
+            }
+
+            foreach (var criteria in misCriterias)
+            {
+                container &=
+                    new QueryContainerDescriptor<T>()
+                        .Nested(n => n
+                            .Path(propertyInfoMeta.PropertyInfo)
+                            .Query(q => q
+                                .MultiMatch(mm => mm
+
+                                    .Fields($"{propertyInfoMeta.PropertyInfo.Name}.{nameof(SearchDocument.MisFieldNestedTypes.Name)}")
+                                    .Query(criteria.Name)
+                                )
+                            )
+                        )
+                    & new QueryContainerDescriptor<T>()
+                        .Nested(n => n
+                            .Path(propertyInfoMeta.PropertyInfo)
+                            .Query(q => q
+                                .Wildcard(mm => mm
+                                    .Field($"{propertyInfoMeta.PropertyInfo.Name}.{nameof(SearchDocument.MisFieldNestedTypes.Value)}")
+                                    .Value($"*{criteria.Value}*")
+                                )
+                            )
+                        );
             }
 
             return container;
